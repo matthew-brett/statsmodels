@@ -393,19 +393,16 @@ statespace_ext_data = dict(
               "library_dirs": [],
               "sources": []},
     _kalman_filter_conventional = {"name" : "statsmodels/tsa/statespace/_filters/_conventional.c",
-              "filename": "_conventional",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_filter_inversions = {"name" : "statsmodels/tsa/statespace/_filters/_inversions.c",
-              "filename": "_inversions",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_filter_univariate = {"name" : "statsmodels/tsa/statespace/_filters/_univariate.c",
-              "filename": "_univariate",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
@@ -416,37 +413,31 @@ statespace_ext_data = dict(
               "library_dirs": [],
               "sources": []},
     _kalman_smoother_alternative = {"name" : "statsmodels/tsa/statespace/_smoothers/_alternative.c",
-              "filename": "_alternative",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_smoother_classical = {"name" : "statsmodels/tsa/statespace/_smoothers/_classical.c",
-              "filename": "_classical",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_smoother_conventional = {"name" : "statsmodels/tsa/statespace/_smoothers/_conventional.c",
-              "filename": "_conventional",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_smoother_univariate = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate.c",
-              "filename": "_univariate",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_simulation_smoother = {"name" : "statsmodels/tsa/statespace/_simulation_smoother.c",
-              "filename": "_simulation_smoother",
               "include_dirs": ['statsmodels/src'],
               "libraries": [],
               "library_dirs": [],
               "sources": []},
     _kalman_tools = {"name" : "statsmodels/tsa/statespace/_tools.c",
-              "filename": "_tools",
               "sources": []},
 )
 
@@ -458,22 +449,25 @@ except ImportError:
         path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
         append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
 
+
 extensions = []
-for name, data in ext_data.items():
-    data['sources'] = data.get('sources', []) + [data['name']]
-
-    destdir = ".".join(dirname(data["name"]).split("/"))
-    data.pop('name')
-
-    filename = data.pop('filename', name)
-
-    obj = Extension('%s.%s' % (destdir, filename), **data)
-
+for key, params in ext_data.items():
+    data = params.copy()
+    name = data.pop('name')
+    data['sources'] = data.get('sources', []) + [name]
+    mod_name = ".".join(splitext(name)[0].split("/"))
+    obj = Extension(mod_name, **data)
     extensions.append(obj)
+    # Record mod_name for selection of extensions needing npymath below.
+    params['mod_name'] = mod_name
 
-# Statespace also requires the npymath configuration. We add this at build time
-# in the custom build_ext command below
-EXTS_NEEDING_NPYMATH = ['statsmodels.tsa.statespace._statespace']
+
+# Statespace and submodules also require the npymath configuration. We add this
+# at build time in the custom build_ext command below.
+EXTS_NEEDING_NPYMATH = (
+    [ext_data['_statespace']['mod_name']] +
+    [params['mod_name'] for key, params in statespace_ext_data.items()
+     if key in ext_data])
 
 
 def get_data_files():
